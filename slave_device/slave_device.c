@@ -31,7 +31,7 @@
 
 
 #define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 32
+#define MAP_SIZE PAGE_SIZE
 
 struct dentry  *file1;//debug file
 
@@ -135,6 +135,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 	char *tmp, ip[20], buf[BUF_SIZE];
 	struct page *p_print;
 	unsigned char *px;
+	size_t offset = 0, rec_n;
 
     pgd_t *pgd;
 	p4d_t *p4d;
@@ -180,9 +181,18 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-			memset(file->private_data , '/0' , PAGE_SIZE);
-			ret = krecv(sockfd_cli, file->private_data , PAGE_SIZE, 0);
-			printk("%s\n",file->private_data);
+			ret = krecv(sockfd_cli, file->private_data , 4096, 0);
+			
+			/*while (offset < 2 * PAGE_SIZE) {
+				rec_n = krecv(sockfd_cli, buf, sizeof(buf), 0);
+				if (rec_n == 0) {
+					break;
+				}
+				memcpy(file->private_data + offset, buf, rec_n);
+				offset += rec_n;
+				
+			}
+			ret = offset;*/
 			break;
 
 		case slave_IOCTL_EXIT:
@@ -200,7 +210,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			pmd = pmd_offset(pud, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
-			printk("%lX\n", pte);
+			printk("slave: %lX\n", pte);
 			ret = 0;
 			break;
 	}
@@ -223,7 +233,7 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
 
 static int slave_map(struct file *file, struct vm_area_struct *vma){
 	//printk("check in mmap\n");
-	unsigned long start_addr = (virt_to_phys(file->private_data) >> 12);
+	unsigned long start_addr = (virt_to_phys(file->private_data) >> PAGE_SHIFT);
 	unsigned long size = vma->vm_end - vma->vm_start;
 	if(remap_pfn_range(vma,vma->vm_start, start_addr, size, vma->vm_page_prot)){
 		printk("remap fail !\n");

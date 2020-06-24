@@ -29,7 +29,7 @@
 #define master_IOCTL_MMAP 0x12345678
 #define master_IOCTL_EXIT 0x12345679
 #define BUF_SIZE 512
-#define MAP_SIZE PAGE_SIZE * 32
+#define MAP_SIZE PAGE_SIZE
 typedef struct socket * ksocket_t;
 
 struct dentry  *file1;//debug file
@@ -221,7 +221,7 @@ static long master_ioctl(struct file *file, unsigned int ioctl_num, unsigned lon
 static ssize_t send_msg(struct file *file, const char __user *buf, size_t count, loff_t *data)
 {
 //call when user is writing to this device
-	printk("write check in!!!!!\n");
+	//printk("write check in!!!!!\n");
 	char msg[BUF_SIZE];
 	if(copy_from_user(msg, buf, count))
 		return -ENOMEM;
@@ -233,7 +233,7 @@ static ssize_t send_msg(struct file *file, const char __user *buf, size_t count,
 }
 
 static int master_map(struct file *file, struct vm_area_struct *vma){
-	printk("check in mmap\n");
+	//printk("check in mmap\n");
 	unsigned long start_addr = (virt_to_phys(file->private_data) >> 12);
 	unsigned long size = vma->vm_end - vma->vm_start;
 	if(remap_pfn_range(vma,vma->vm_start, start_addr, size, vma->vm_page_prot)){
