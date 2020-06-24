@@ -144,7 +144,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 
-    printk("slave device ioctl");
+    //printk("slave device ioctl");
 
 	switch(ioctl_num){
 		case slave_IOCTL_CREATESOCK:// create socket and connect to master
@@ -180,7 +180,9 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-			ret = krecv(sockfd_cli, file->private_data , 4096, 0);
+			memset(file->private_data , '/0' , PAGE_SIZE);
+			ret = krecv(sockfd_cli, file->private_data , PAGE_SIZE, 0);
+			printk("%s\n",file->private_data);
 			break;
 
 		case slave_IOCTL_EXIT:
@@ -198,7 +200,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			pmd = pmd_offset(pud, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
-			printk("slave: %lX\n", pte);
+			printk("%lX\n", pte);
 			ret = 0;
 			break;
 	}
@@ -220,7 +222,7 @@ ssize_t receive_msg(struct file *filp, char *buf, size_t count, loff_t *offp )
 }
 
 static int slave_map(struct file *file, struct vm_area_struct *vma){
-	printk("check in mmap\n");
+	//printk("check in mmap\n");
 	unsigned long start_addr = (virt_to_phys(file->private_data) >> 12);
 	unsigned long size = vma->vm_end - vma->vm_start;
 	if(remap_pfn_range(vma,vma->vm_start, start_addr, size, vma->vm_page_prot)){

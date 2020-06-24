@@ -13,6 +13,16 @@
 #define MAP_SIZE 4096*32
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
+
+void strdelete(char *str , int size){
+	for(int i = 0; i < strlen(str) - size ; i ++){
+		str[i] = str[i + size];
+	}
+	for(int i = strlen(str) - size ; i < strlen(str) ; i++){
+		str[i] = '\0';
+	}
+}
+
 int main (int argc, char* argv[])
 {
 	char buf[BUF_SIZE];
@@ -68,22 +78,34 @@ for (int i = 0; i < atoi(argv[1]); ++i){
 			}while(ret > 0);
 			break;
 		case 'm':
+			offset = 0;
+			char buffer[PAGE_SIZE * 3];
+			int str_size = 0;
 			do{			
 				ret = ioctl(dev_fd , 0x12345678);
-				printf("get ret = %d\n", ret);
-				ftruncate(file_fd , offset + ret);
-				file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, offset);
-				ioctl(dev_fd, 9020 , file_address);
-				if(file_address == NULL)	printf("file err\n");
-				if(kernel_address == NULL)	printf("kernel err\n");
-
-				//printf("map success , add = %d\n" , file_address);
-				//char out[9000];
-				memcpy(file_address, kernel_address , ret);
-				//printf("copy successs : %s\n" , out);
-				offset += ret;
-				file_size += ret;
+				//printf("get ret = %d\n", ret);
+				strncat(buffer , kernel_address , ret);
+				str_size += ret;
+				//ioctl(dev_fd, 9020 , file_address);
+				//printf("map success , add = %llX\n , offset = %d\n" , file_address, offset);	
+				if(str_size >= PAGE_SIZE){
+					ftruncate(file_fd , offset + PAGE_SIZE);
+					file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, offset);
+					memcpy(file_address, buffer , PAGE_SIZE);
+					//printf("copy successs\n" );
+					strdelete(buffer , PAGE_SIZE);
+					offset += PAGE_SIZE;
+					str_size -= PAGE_SIZE;
+				}
+				if(ret == 0){
+					ftruncate(file_fd , offset + str_size);
+					file_address = mmap(NULL, str_size, PROT_WRITE, MAP_SHARED, file_fd, offset);
+					memcpy(file_address, buffer , str_size);
+					offset += str_size;
+					str_size = 0;
+				}
 			}while( ret > 0);
+			file_size = offset;
 			//printf("mmap success\n");
 			break;
 	}
